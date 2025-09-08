@@ -1,0 +1,305 @@
+<!-- <!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="container">
+    <a class="navbar-brand" href="/">MultiTenantSaaS</a>
+    <div>
+      <button id="logoutBtn" class="btn btn-outline-secondary">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<main class="container py-4">
+  <h3 id="tenantTitle">Dashboard</h3>
+  <div class="mb-3">
+    <button class="btn btn-sm btn-success" id="refreshBtn">Refresh</button>
+    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+      Add New User
+    </button>
+  </div>
+
+  <div id="info" class="mb-4"></div>
+
+  <h5>Users</h5>
+  <table class="table" id="usersTable">
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  
+  <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add New User</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="addUserForm">
+            <div class="mb-3">
+              <label for="name" class="form-label">Name</label>
+              <input type="text" class="form-control" id="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" class="form-control" id="email" required>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">Password</label>
+              <input type="password" class="form-control" id="password" required>
+            </div>
+            <div class="mb-3">
+              <label for="role" class="form-label">Role</label>
+              <select id="role" class="form-select">
+                <option value="member" selected>Member</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Create User</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+<button onclick="window.location.href='announcement.html'"
+        style="padding:10px 15px; margin:10px; background:#2d3e50; color:white; border:none; border-radius:6px; cursor:pointer;">
+  Announcements
+</button>
+
+
+<script src="dashboard.js"></script>
+</body>
+</html> -->
+
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #6c63ff;
+      --secondary-color: #f5f5f5;
+      --accent-color: #ff6584;
+      --success-color: #28a745;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--secondary-color);
+      min-height: 100vh;
+      padding-bottom: 3rem;
+    }
+
+  
+    .navbar {
+      background: linear-gradient(90deg, var(--primary-color), #5a54d1);
+    }
+    .navbar .navbar-brand {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.5rem;
+    }
+    .navbar .btn-outline-secondary {
+      color: #fff;
+      border-color: #fff;
+      transition: all 0.3s;
+    }
+    .navbar .btn-outline-secondary:hover {
+      background-color: #fff;
+      color: var(--primary-color);
+    }
+
+  
+    h3#tenantTitle {
+      color: var(--primary-color);
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+  
+    .btn-primary {
+      background-color: var(--accent-color);
+      border-color: var(--accent-color);
+      transition: all 0.3s;
+    }
+    .btn-primary:hover {
+      background-color: #ff446e;
+      border-color: #ff446e;
+    }
+    .btn-success {
+      background-color: var(--success-color);
+      border-color: var(--success-color);
+      transition: all 0.3s;
+    }
+    .btn-success:hover {
+      background-color: #218838;
+      border-color: #218838;
+    }
+
+    
+    table#usersTable {
+      background-color: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    table#usersTable th, table#usersTable td {
+      padding: 0.75rem 1rem;
+      vertical-align: middle;
+    }
+    table#usersTable tbody tr:hover {
+      background-color: rgba(108,99,255,0.05);
+    }
+
+    
+    .modal-content {
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      padding: 1rem;
+    }
+    .modal-header .btn-close {
+      background: transparent;
+      border: none;
+    }
+
+    
+    .form-control, .form-select {
+      border-radius: 10px;
+      padding: 0.6rem 1rem;
+      border: 1px solid #ccc;
+      transition: all 0.3s;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 5px rgba(108,99,255,0.3);
+      outline: none;
+    }
+
+    
+    #announcementBtn {
+      padding: 10px 20px;
+      margin: 590px;
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: fixed;
+      bottom: 20px;
+      right: 0px;
+      z-index: 1000;
+    }
+    #announcementBtn:hover {
+      background: var(--accent-color);
+    }
+
+    
+    @media (max-width: 768px) {
+      .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+      }
+      #announcementBtn {
+       
+        right: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light">
+  <div class="container">
+    <a class="navbar-brand" href="/">MultiTenantSaaS</a>
+    <div>
+      <button id="logoutBtn" class="btn btn-outline-secondary">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<main class="container py-4">
+  <h3 id="tenantTitle">Dashboard</h3>
+  <div class="mb-3 d-flex gap-2 flex-wrap">
+    <button class="btn btn-success btn-sm" id="refreshBtn">Refresh</button>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
+      Add New User
+    </button>
+  </div>
+
+  <div id="info" class="mb-4"></div>
+
+  <h5>Users</h5>
+  <table class="table" id="usersTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Role</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+
+  <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add New User</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="addUserForm">
+            <div class="mb-3">
+              <label for="name" class="form-label">Name</label>
+              <input type="text" class="form-control" id="name" required>
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" class="form-control" id="email" required>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">Password</label>
+              <input type="password" class="form-control" id="password" required>
+            </div>
+            <div class="mb-3">
+              <label for="role" class="form-label">Role</label>
+              <select id="role" class="form-select">
+                <option value="member" selected>Member</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Create User</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<button id="announcementBtn" onclick="window.location.href='announcement.html'">
+  Announcements
+</button>
+
+<script src="dashboard.js"></script>
+</body>
+</html>
