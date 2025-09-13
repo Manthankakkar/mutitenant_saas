@@ -53,18 +53,31 @@
       cursor: pointer;
       border-radius: 4px;
     }
+    #logout{
+    
+      padding: 6px 10px;
+      margin: 50px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      background-color: black;
+      border-radius: 5px;
+      color: azure;
+
+    
+    }
 
     button.suspend { background: #f39c12; color: white; }
     button.upgrade { background: #27ae60; color: white; }
     button.downgrade { background: #2980b9; color: white; }
     button.delete { background: #e74c3c; color: white; }
 
-    /* Status colors */
+  
     .status-active { color: green; font-weight: bold; }
     .status-suspended { color: orange; font-weight: bold; }
     .status-deleted { color: red; font-weight: bold; }
 
-    /* Plan colors */
+  
     .plan-free { color: gray; font-weight: bold; }
     .plan-basic { color: blue; font-weight: bold; }
     .plan-pro { color: purple; font-weight: bold; }
@@ -96,6 +109,7 @@
         </tbody>
       </table>
     </section>
+    <button id="logout">Logout</button>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -192,6 +206,10 @@
         alert(err.message || "Delete failed.");
       }
     }
+    const logout=document.getElementById("logout")
+    logout.addEventListener("click",()=>{
+      window.location.href="login.html"
+    })
   </script>
 </body>
 </html>

@@ -23,6 +23,7 @@ async function load() {
           <p class="card-text mb-1"><strong>Email:</strong> ${user.email}</p>
           <p class="card-text mb-1"><strong>Role:</strong> ${user.role}</p>
           <p class="card-text"><strong>Tenant:</strong> ${tenant.name}</p>
+
         </div>
       </div>
     `;
@@ -41,10 +42,21 @@ async function load() {
           <td>
             <button class="btn btn-sm btn-warning edit-btn" data-id="${u._id}">Edit</button>
             <button class="btn btn-sm btn-danger delete-btn" data-id="${u._id}">Delete</button>
+                      <!-- inside the <tr> for each user -->
+<td>
+  <button class="btn btn-sm btn-outline-primary video-call-btn" data-userid="${user._id}">
+    <i class="bi bi-camera-video"></i> Call
+  </button>
+</td>
           </td>
         `;
       } else {
-        row.innerHTML = `<td>${u.name}</td><td>${u.email}</td><td>${u.role}</td>`;
+        row.innerHTML = `<td>${u.name}</td><td>${u.email}</td><td>${u.role}</td>
+        <td>
+  <button class="btn btn-sm btn-outline-primary video-call-btn" data-userid="${user._id}">
+    <i class="bi bi-camera-video"></i> Join 
+  </button>
+</td>`;
       }
 
       tbody.appendChild(row);
@@ -150,34 +162,349 @@ document.querySelector('#usersTable tbody').addEventListener('click', async (e) 
 
 
 
-
-//   const socket = io("http://localhost:5000");
-//   const tenantId = localStorage.getItem("userid"); // dynamically set this from logged-in user
-
-//   // Join tenant room
-//   socket.emit("joinTenantRoom", tenantId);
-
-//   // Send announcement (admin only)
-//   function sendAnnouncement(message) {
-//     const sender = "Tenant Admin"; // set dynamically
-//     socket.emit("sendAnnouncement", { tenantId, message, sender });
-//   }
-
-//   // Receive announcements
-//   socket.on("receiveAnnouncement", (data) => {
-//     console.log("New announcement:", data);
-//     // You can display in UI
-//     const announcementsDiv = document.getElementById("announcements");
-//     const msgEl = document.createElement("p");
-//     msgEl.textContent = `${data.sender}: ${data.message}`;
-//     announcementsDiv.appendChild(msgEl);
-//   });
-
-
-// <div id="announcements"></div>
-
-
-
-
-// Initial load
 load();
+
+
+
+
+
+const cashfree = Cashfree({
+  mode: "sandbox",
+});
+
+document.getElementById("renderBtn").addEventListener("click", async () => {
+  try {
+    const res = await axios.post(
+      "http://localhost:5000/api/payments/create-order",
+      {
+        id: "123",
+        name: "John Doe",
+        email: "john@example.com",
+        phone: "9876543210",
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    console.log("res is", res);
+    console.log("res.data is ", res.data);
+
+    const { payment_session_id, order_id } = res.data;
+    let checkoutOptions = {
+      paymentSessionId: payment_session_id,
+      redirectTarget: "_modal", 
+    };
+
+    await cashfree
+      .checkout(checkoutOptions)
+      .then(async () => {
+        if (order_id) {
+          const verifyRes = await axios.post(
+            "http://localhost:5000/api/payments/verify-payment",
+            { order_id },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          const divparent = document.getElementById("divparent");
+          const paymentmsgdiv = document.getElementById("paymentmsgdiv");
+
+          if (verifyRes.data.message) {
+            alert("Payment done successfully ");
+
+           
+            if (verifyRes.data.isPremium) {
+              paymentmsgdiv.innerHTML = "Premium User ";
+            } else {
+              paymentmsgdiv.innerHTML = "Subscribe to become premium user";
+            }
+
+            divparent.appendChild(paymentmsgdiv);
+          }
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+
+async function checkUserStatus() {
+  try {
+    const res = await axios.get("http://localhost:5000/api/users/status", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const divparent = document.getElementById("divparent");
+    const paymentmsgdiv = document.getElementById("paymentmsgdiv");
+
+    if (res.data.isPremium) {
+      paymentmsgdiv.innerHTML = "Premium User ⭐ ";
+      const premium=res.data.isPremium
+      localStorage.setItem("premium","true")
+    } else {
+      paymentmsgdiv.innerHTML = "Subscribe to become premium user";
+      localStorage.setItem("premium","false")
+
+    }
+
+    divparent.appendChild(paymentmsgdiv);
+  } catch (err) {
+    console.error("Error fetching user status:", err);
+  }
+}
+
+
+window.onload = checkUserStatus;
+
+const premiumuser=localStorage.getItem("premium")
+
+
+if (premiumuser){
+const socket = io("http://localhost:5000");
+
+let localStream;
+let peerConnection;
+const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+async function initLocalStream() {
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    document.getElementById("localVideo").srcObject = localStream;
+  } catch (err) {
+    console.error("Error accessing media devices:", err);
+  }
+}
+
+function createPeerConnection(roomId) {
+  peerConnection = new RTCPeerConnection(config);
+
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      socket.emit("signal", { roomId, data: { candidate: event.candidate } });
+    }
+  };
+
+  peerConnection.ontrack = (event) => {
+    document.getElementById("remoteVideo").srcObject = event.streams[0];
+  };
+
+  if (localStream) {
+    localStream.getTracks().forEach((track) => peerConnection.addTrack(track, localStream));
+  }
+
+  return peerConnection;
+}
+
+
+socket.on("ready", async ({ roomId }) => {
+  
+  if (window.isCaller) {
+    peerConnection = createPeerConnection(roomId);
+
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+
+    socket.emit("signal", { roomId, data: { offer } });
+  }
+});
+
+socket.on("signal", async ({ from, data }) => {
+  if (!peerConnection) {
+    peerConnection = createPeerConnection(window.currentRoom);
+  }
+
+  if (data.offer) {
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    socket.emit("signal", { roomId: window.currentRoom, data: { answer } });
+  }
+
+  if (data.answer) {
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+  }
+
+  if (data.candidate) {
+    try {
+      await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+    } catch (err) {
+      console.error("Error adding ICE candidate", err);
+    }
+  }
+});
+
+document.querySelector("#usersTable tbody").addEventListener("click", async (e) => {
+  if (e.target.classList.contains("video-call-btn") && e.target.innerText.includes("Call")) {
+    const premiumuser = localStorage.getItem("premium") === "true";
+    if (!premiumuser) {
+      alert("Subscription is required to access premium features");
+      return;
+    }
+
+    const roomId = prompt("Enter Room ID to create:");
+    if (!roomId) return;
+
+    window.currentRoom = roomId;
+    window.isCaller = true;
+
+    await initLocalStream();
+    socket.emit("join-room", { roomId });
+  }
+});
+
+document.querySelector("#usersTable tbody").addEventListener("click", async (e) => {
+  if (e.target.classList.contains("video-call-btn") && e.target.innerText.includes("Join")) {
+    
+    
+
+    const roomId = prompt("Enter Room ID to join:");
+    if (!roomId) return;
+
+    window.currentRoom = roomId;
+    window.isCaller = false;
+
+    await initLocalStream();
+    socket.emit("join-room", { roomId });
+  }
+});
+}
+
+
+
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const customizationForm = document.getElementById("customizationForm");
+  const token = localStorage.getItem("token");
+
+ 
+  if (token) {
+    try {
+      const res = await axios.get("http://localhost:5000/api/tenants/customization", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const { branding, theme } = res.data;
+      applyCustomization(branding, theme);
+    } catch (err) {
+      console.error("Failed to load customization", err);
+    }
+  }
+
+  
+  if (customizationForm) {
+    customizationForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (!token) {
+        alert("You must be logged in!");
+        return;
+      }
+
+      const payload = {
+        logoUrl: document.getElementById("logoUrl").value,
+        primaryColor: document.getElementById("primaryColor").value,
+        secondaryColor: document.getElementById("secondaryColor").value,
+        theme: document.getElementById("theme").value
+      };
+
+      try {
+        const res = await axios.put("http://localhost:5000/api/tenants/customize", payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        alert("Customization updated successfully!");
+
+        
+        applyCustomization(payload, payload.theme);
+
+      
+        const modal = bootstrap.Modal.getInstance(document.getElementById("customizationModal"));
+        modal.hide();
+
+      } catch (err) {
+        console.error(err);
+        alert(err.response?.data?.message || "Error updating customization");
+      }
+    });
+  }
+});
+
+function applyCustomization(branding, theme) {
+  if (branding.logoUrl) {
+    const logo = document.getElementById("appLogo");
+    if (logo) logo.src = branding.logoUrl;
+  }
+
+  if (branding.primaryColor) {
+    document.documentElement.style.setProperty("--primary", branding.primaryColor);
+  }
+  if (branding.secondaryColor) {
+    document.documentElement.style.setProperty("--secondary", branding.secondaryColor);
+  }
+
+  if (theme === "dark") {
+    document.body.classList.add("bg-dark", "text-light");
+  } else {
+    document.body.classList.remove("bg-dark", "text-light");
+  }
+}
+
+
+
+
+
+
+
+
+const taskbutton=document.getElementById("taskbutton")
+taskbutton.addEventListener("click",()=>{
+  window.location.href="task.html"
+})
+
+
+
+const userSearchInput = document.getElementById("userSearch");
+const assignedUserContainer = document.getElementById("assignedUserSelect");
+
+userSearchInput.addEventListener("input", async () => {
+  const query = userSearchInput.value.trim();
+  if (query.length < 1) {
+    assignedUserContainer.innerHTML = `<div class="text-muted">Type to search users...</div>`;
+    return;
+  }
+  await loadUsersForTasks(query);
+});
+
+
+async function loadUsersForTasks(search = "") {
+  try {
+    const res = await axiosInstance.get(`http://localhost:5000/api/users?q=${search}`);
+    
+    assignedUserContainer.innerHTML = "";
+
+    if (res.data.length === 0) {
+      assignedUserContainer.innerHTML = `<div class="text-muted">No users found</div>`;
+      return;
+    }
+
+    res.data.forEach(u => {
+      const userDiv = document.createElement("div");
+      userDiv.className = "list-group-item list-group-item-action";
+      userDiv.textContent = `${u.name} (${u.email})`;
+
+
+      
+
+      userDiv.addEventListener("click", () => {
+        console.log("Selected user:", u);
+        
+      });
+
+      assignedUserContainer.appendChild(userDiv);
+    });
+  } catch (err) {
+    console.error("Error loading users:", err);
+  }
+}
