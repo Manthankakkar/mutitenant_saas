@@ -22,9 +22,15 @@ exports.registerTenant = async (req, res) => {
       role: 'admin'
     });
     await user.save();
-
+console.log("new user is ",user)
     const token = jwt.sign({ id: user._id, tenant: tenant._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, tenant: { id: tenant._id, name: tenant.name } });
+    // res.json({ token, tenant: { id: tenant._id, name: tenant.name } });
+    
+    res.json({
+  token,
+  user: { id: user._id, name: user.name, email: user.email, role: user.role },
+  tenant: { id: tenant._id, name: tenant.name }
+});
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: err.message });
@@ -51,6 +57,7 @@ exports.registerTenant = async (req, res) => {
 
 exports.login = async (req, res) => {
   const { email, password, tenantName } = req.body;
+  console.log("req.body is ",req.body)
 
   if (!email || !password) {
     return res.status(400).json({ message: "Missing fields" });
@@ -60,10 +67,12 @@ exports.login = async (req, res) => {
     let user;
     let tenant = null;
     user = await User.findOne({ email: email.toLowerCase(), role: "superadmin" });
+    console.log("user is ",user)
     if (user) {
       const ok = await bcrypt.compare(password, user.password);
+      console.log("ok is ",ok)
       if (!ok) return res.status(400).json({ message: "Invalid credentials" });
-
+      
       const token = jwt.sign(
         { id: user._id, role: user.role }, 
         process.env.JWT_SECRET,
@@ -75,18 +84,26 @@ exports.login = async (req, res) => {
         user: { id: user._id, name: user.name, role: user.role },
       });
     }
-
+    
     if (!tenantName) {
       return res.status(400).json({ message: "Tenant name is required" });
     }
-
+    
     tenant = await Tenant.findOne({ name: tenantName });
+    if (!tenant) {
+  return res.status(400).json({ message: "Tenant not found" });
+}
+    if (tenant.status=="suspended"){
+      return res.status(404).json({message:"Tenant Account is suspended by the SuperUser"})
+    }
     if (!tenant) return res.status(400).json({ message: "Tenant not found" });
-
+    
     user = await User.findOne({ email: email.toLowerCase(), tenant: tenant._id });
+    console.log("user is ",user)
     if (!user) return res.status(400).json({ message: "User not found" });
-
+    
     const ok = await bcrypt.compare(password, user.password);
+    console.log("ok is ",ok)
     if (!ok) return res.status(400).json({ message: "Invalid credentials" });
     console.log("normal user",user)
     const token = jwt.sign(

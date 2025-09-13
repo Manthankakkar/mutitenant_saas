@@ -15,6 +15,7 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   resetPasswordToken: { type: String },
 resetPasswordExpires: { type: Date },
+isPremium:{type:Boolean,default:false},
 });
 
 UserSchema.index({ email: 1, tenant: 1 }, { unique: true });

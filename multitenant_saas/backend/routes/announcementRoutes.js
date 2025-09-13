@@ -8,6 +8,7 @@ router.get("/:tenantId", auth, async (req, res) => {
   try {
     const { tenantId } = req.params;
     
+    
     const announcements = await Announcement.find({ tenant: tenantId })
       .sort({ createdAt: 1 });
 

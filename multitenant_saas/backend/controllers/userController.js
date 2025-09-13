@@ -198,6 +198,7 @@ exports.resetPassword = async (req, res) => {
       resetPasswordToken: token,
       resetPasswordExpires: { $gt: Date.now() }
     });
+    console.log("reset user is",user)
 
     if (!user) return res.status(400).json({ message: "Invalid or expired token" });
     console.log("old user is",user)
@@ -209,7 +210,8 @@ exports.resetPassword = async (req, res) => {
     user.resetPasswordExpires = undefined;
 
     await user.save();
-    console.log("updated user is ",user)
+    console.log("updated user is",user)
+    
 
     res.json({ message: "Password reset successfully" });
   } catch (err) {
@@ -217,3 +219,19 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+exports.getUserStatus = async (req, res) => {
+  try {
+    const id = req.user.id;
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({ isPremium: user.isPremium });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
